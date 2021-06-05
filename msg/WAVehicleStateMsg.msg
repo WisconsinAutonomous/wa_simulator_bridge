@@ -1,0 +1,10 @@
+geometry_msgs/Vector3 position
+geometry_msgs/Quaternion rotation
+
+
+geometry_msgs/Vector3 linear_velocity
+geometry_msgs/Vector3 angular_velocity
+
+
+geometry_msgs/Vector3 linear_acceleration
+geometry_msgs/Vector3 angular_acceleration
