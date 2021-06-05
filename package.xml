@@ -4,7 +4,7 @@
   <name>wa_simulator_bridge</name>
   <version>0.0.0</version>
   <description>The ROS interface to the WA Simulator</description>
-  <maintainer email="ianruh2@gmail.com">Ian Ruh</maintainer>
+  <maintainer email="7023667+ianruh@users.noreply.github.com">ianruh</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

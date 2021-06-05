@@ -18,7 +18,6 @@ class WASimulatorBridge(Node):
 
         self.address = ("localhost", 5555)
         self.connection = mp.Client(self.address)
-        self.topic_prefix = "wa_simulator"
         
         # Storage for publisher handles
         self.publisher_handles = {}
@@ -172,13 +171,13 @@ class WASimulatorBridge(Node):
 
 
     def _constructVehicleStateTopic(self, id):
-        return f"{self.topic_prefix}/vehicle_state/{id}"
+        return f"vehicle_state/{id}"
     
     def _constructControllerTopic(self, id):
-        return f"{self.topic_prefix}/controller/{id}"
+        return f"controller/{id}"
     
     def _constructSensorTopic(self, id):
-        return f"{self.topic_prefix}/sensor/{id}"
+        return f"sensor/{id}"
         
     def controller_callback(self, msg, controller_id):
         """
