@@ -50,10 +50,10 @@ class WASimulatorBridge(Node):
                     topic = self._constructControllerTopic(controller_id)
                     
                     # Define a callback for this topic
-                    def topic_callback(msg):
-                        self.controller_callback(msg, controller_id)
+                    def topic_callback_factory(controller_id):
+                        return lambda msg: self.controller_callback(msg, controller_id)
                     
-                    self.subscriber_handles[topic] = self.create_subscription(WAControlMsg, topic, topic_callback, 10)
+                    self.subscriber_handles[topic] = self.create_subscription(WAControlMsg, topic, topic_callback_factory(controller_id), 10)
             elif(msg["type"] == "vehicle_state"):
                 # msg = {
                 #     "type": "vehicle_state",
