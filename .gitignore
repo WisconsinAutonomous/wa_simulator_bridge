@@ -1,1 +1,3 @@
 old/
+.*.swp
+__pycache__/

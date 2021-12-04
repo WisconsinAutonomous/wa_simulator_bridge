@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            "bridge = wa_simulator_ros2_bridge.bridge:main",
         ],
     },
 )
