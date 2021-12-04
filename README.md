@@ -1,15 +1,29 @@
-# WA Simulator ROS Bridge
+# WA Simulator ROS2 Bridge
 
-This package provides a ROS interface to [WA Simulator](https://github.com/WisconsinAutonomous/wa_simulator). 
+This package provides a ROS2 interface to [WA Simulator](https://github.com/WisconsinAutonomous/wa_simulator). 
 
 ## Getting Started
 
-First, install and confirm that WA Simulator is running on you computer. You must also already have ROS2 installed.
+You must have `wa_simulator` installed on your system. To do this, please refer to the [documentation](https://wisconsinautonomous.github.io/wa_simulator). You will also need ROS2 installed. It's recommended you use Docker, as seen in our [ROS2 tutorial](https://github.com/wisconsiniautonomous/wa_ros_tutorial).
 
-Add this repository as a submodule to your workspace, or download into your workspace.
+You will then need to add this repository as a submodule in your workspace or simply clone it. You can do that with one of the following commands:
 
-There is one node `WASimulatorBridge.py`.  The WA Simulator must be launched and the `external_enable` parameter set to true in WASimulationManager.
+**Submodule (Recommended)**
+```bash
+git submodule add git@github.com:WisconsinAutonomous/wa_simulator_ros2_bridge.git
+```
 
+**Clone**
+```bash
+git clone git@github.com:WisconsinAutonomous/wa_simulator_ros2_bridge.git
+```
 
+## Usage
 
-[More documentation to come]
+The `wa_simulator_ros2_bridge` has one node: `bridge.py`. To run the node, run the following command:
+
+```bash
+ros2 run wa_simulator_ros2_bridge bridge.py
+```
+
+*More documentation to come...*
