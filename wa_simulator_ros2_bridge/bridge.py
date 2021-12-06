@@ -70,13 +70,21 @@ class WASimulatorROS2Bridge(Node):
         data = message["data"]
         if name not in self.message_callbacks:
             if msg_type in self._publisher_creators and msg_type in self._message_callbacks:
-                self._publisher_creators[msg_type](self)
-                self.message_callbacks[name] = self._message_callbacks[msg_type]
+                # Create the publishers
+                publisher_creator = self._publisher_creators[msg_type]
+                publisher_creator(self)
+
+                # Add the receiver
+                message_callback = self._message_callbacks[msg_type]
+                self.bridge.add_receiver(name, self, message_parser=message_callback) 
+
+                # Call the callback since this receiver was added after the message was actually received
+                message_callback(self, message)
             else:
                 raise RuntimeError(f"Could not infer publisher creator for message type {msg_type}.")
-
-        handle = self.message_callbacks[name]
-        handle(self, data)
+        else:
+            # Sanity check
+            raise RuntimeError(f"Global receiver callback was called. This shouldn't be happening...")
         
     # -----------------------------
     # Inferrable publisher creators
@@ -124,25 +132,29 @@ class WASimulatorROS2Bridge(Node):
     _message_callbacks: Dict[str, Callable[['WASimulatorROS2Bridge', dict], None]] = {}
 
     def _message_callback_WASystem(self, message: dict):
-        self.publisher_handles["time"].publish(self._time_to_Time(message["time"]))
-        self.publisher_handles["step_number"].publish(Int32(data=message["step_number"]))
+        data = message["data"]
+        self.publisher_handles["time"].publish(self._time_to_Time(data["time"]))
+        self.publisher_handles["step_number"].publish(Int32(data=data["step_number"]))
     _message_callbacks['WASystem'] = _message_callback_WASystem
 
     def _message_callback_WAVehicle(self, message: dict):
-        self.publisher_handles["position"].publish(self._WAVector_to_Vector3(message["position"]))
-        self.publisher_handles["rotation"].publish(self._WAQuaternion_to_Quaternion(message["rotation"]))
-        self.publisher_handles["linear_velocity"].publish(self._WAVector_to_Vector3(message["linear_velocity"]))
-        self.publisher_handles["angular_velocity"].publish(self._WAQuaternion_to_Quaternion(message["angular_velocity"]))
-        self.publisher_handles["linear_acceleration"].publish(self._WAVector_to_Vector3(message["linear_acceleration"]))
-        self.publisher_handles["angular_acceleration"].publish(self._WAQuaternion_to_Quaternion(message["angular_acceleration"]))
+        data = message["data"]
+        self.publisher_handles["position"].publish(self._WAVector_to_Vector3(data["position"]))
+        self.publisher_handles["rotation"].publish(self._WAQuaternion_to_Quaternion(data["rotation"]))
+        self.publisher_handles["linear_velocity"].publish(self._WAVector_to_Vector3(data["linear_velocity"]))
+        self.publisher_handles["angular_velocity"].publish(self._WAQuaternion_to_Quaternion(data["angular_velocity"]))
+        self.publisher_handles["linear_acceleration"].publish(self._WAVector_to_Vector3(data["linear_acceleration"]))
+        self.publisher_handles["angular_acceleration"].publish(self._WAQuaternion_to_Quaternion(data["angular_acceleration"]))
     _message_callbacks['WAVehicle'] = _message_callback_WAVehicle
 
     def _message_callback_WAGPSSensor(self, message: dict):
-        self.publisher_handles["gps"].publish(self._WAGPSSensor_to_NavSatFix(**message))
+        data = message["data"]
+        self.publisher_handles["gps"].publish(self._WAGPSSensor_to_NavSatFix(**data))
     _message_callbacks['WAGPSSensor'] = _message_callback_WAGPSSensor
 
     def _message_callback_WAIMUSensor(self, message: dict):
-        self.publisher_handles["imu"].publish(self._WAIMUSensor_to_Imu(**message))
+        data = message["data"]
+        self.publisher_handles["imu"].publish(self._WAIMUSensor_to_Imu(**data))
     _message_callbacks['WAIMUSensor'] = _message_callback_WAIMUSensor
 
     # ---------------------------------------------
