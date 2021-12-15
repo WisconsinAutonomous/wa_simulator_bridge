@@ -13,7 +13,7 @@ from typing import Dict, Callable, Any, List, NoReturn
 class WASimulatorROS2Bridge(Node):
 
     def __init__(self):
-        super().__init__('wa_simulator_ros2_bridge')
+        super().__init__('wa_simulator_ros_bridge')
 
         # Handles for publishers and subscribers
         # Publishers/subscribers will be added dynamically, based on the requirements of the simulation

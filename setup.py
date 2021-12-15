@@ -1,6 +1,6 @@
 from setuptools import setup
 
-package_name = 'wa_simulator_ros2_bridge'
+package_name = 'wa_simulator_ros_bridge'
 
 setup(
     name=package_name,
@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "bridge = wa_simulator_ros2_bridge.bridge:main",
+            "bridge = wa_simulator_ros_bridge.bridge:main",
         ],
     },
 )
