@@ -11,7 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'wa_simulator'],
     zip_safe=True,
     maintainer='wisconsinautonomous',
     maintainer_email='wisconsinautonomous@studentorg.wisc.edu',
