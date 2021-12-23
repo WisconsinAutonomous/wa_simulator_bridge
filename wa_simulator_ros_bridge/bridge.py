@@ -42,6 +42,8 @@ class WASimulatorROS2Bridge(Node):
     def __init__(self):
         super().__init__('wa_simulator_ros_bridge')
 
+        self.logger = rclpy.logging.get_logger(self.get_name())
+
         # Handles for publishers and subscribers
         # Publishers/subscribers will be added dynamically, based on the requirements of the simulation
         self.publisher_handles = {}
@@ -65,7 +67,8 @@ class WASimulatorROS2Bridge(Node):
         ip_descriptor = ParameterDescriptor(
             type=ParameterType.PARAMETER_STRING,
             description="The ip that the bridge will listen for information from.")
-        self.declare_parameter("ip", value="172.20.0.3", descriptor=ip_descriptor)
+        self.declare_parameter("ip", value="172.20.0.3",
+                               descriptor=ip_descriptor)
         self.ip = self.get_parameter("ip").value
 
         # -----------------------
@@ -91,7 +94,6 @@ class WASimulatorROS2Bridge(Node):
         """
         This callback will be called at 100hz. When a message is received from the simulation,
         the message will be converted to the ros equivalent and published.
-
         The first time a message is received with a specific name, it will generate a topic and a publisher.
         This will only happen if the conversion between the dict and the ros message is known.
         """
@@ -110,6 +112,8 @@ class WASimulatorROS2Bridge(Node):
 
         When a new message is received, i.e. one with a unique name, a subscriber will be created
         """
+        self.logger.info(f"Received message from {name}.")
+
         msg_type = message["type"]
         data = message["data"]
         if name not in self.message_callbacks:
@@ -182,6 +186,16 @@ class WASimulatorROS2Bridge(Node):
         self.publisher_handles["imu"] = self.create_publisher(Imu, "imu", 1)
     _publisher_creators["WAIMUSensor"] = _create_publisher_WAIMUSensor
 
+    def _create_publisher_WATrack(self):
+        global PoseArray, Pose, Point
+        from geometry_msgs.msg import PoseArray, Pose, Point
+
+        self.publisher_handles["track/left"] = self.create_publisher(
+            PoseArray, "track/left", 1)
+        self.publisher_handles["track/right"] = self.create_publisher(
+            PoseArray, "track/right", 1)
+    _publisher_creators["WATrack"] = _create_publisher_WATrack
+
     # ----------------------------
     # Inferrable message callbacks
     # ----------------------------
@@ -223,6 +237,14 @@ class WASimulatorROS2Bridge(Node):
         self.publisher_handles["imu"].publish(self._WAIMUSensor_to_Imu(**data))
     _message_callbacks['WAIMUSensor'] = _message_callback_WAIMUSensor
 
+    def _message_callback_WATrack(self, message: dict):
+        data = message["data"]
+        self.publisher_handles["track/left"].publish(
+            self._points_to_PoseArray(data["left_points"]))
+        self.publisher_handles["track/right"].publish(
+            self._points_to_PoseArray(data["right_points"]))
+    _message_callbacks['WATrack'] = _message_callback_WATrack
+
     # ---------------------------------------------
     # WA Simulator data types to ROS msg converters
     # ---------------------------------------------
@@ -243,6 +265,9 @@ class WASimulatorROS2Bridge(Node):
     def _WAIMUSensor_to_Imu(self, linear_acceleration: wa.WAVector, angular_velocity: wa.WAQuaternion, orientation: wa.WAQuaternion):
         angular_velocity = wa.WAVector(angular_velocity.to_euler())
         return Imu(orientation=self._WAQuaternion_to_Quaternion(orientation), angular_velocity=self._WAVector_to_Vector3(angular_velocity), linear_acceleration=self._WAVector_to_Vector3(linear_acceleration))
+
+    def _points_to_PoseArray(self, points):
+        return PoseArray(poses=[Pose(position=Point(x=x, y=y, z=z)) for x, y, z in points])
 
 
 def main(args=None):
