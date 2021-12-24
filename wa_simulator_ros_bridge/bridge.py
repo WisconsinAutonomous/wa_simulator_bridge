@@ -36,7 +36,6 @@ import wa_simulator as wa
 # External imports
 from typing import Dict, Callable, Any, List, NoReturn
 
-
 class WASimulatorROS2Bridge(Node):
 
     def __init__(self):
@@ -87,7 +86,7 @@ class WASimulatorROS2Bridge(Node):
         self.sim_manager = wa.WASimulationManager(self.system, self.bridge)
 
         # Periodic publishing
-        timer_period = 0.01  # seconds
+        timer_period = 1e-9  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def timer_callback(self):
@@ -181,7 +180,9 @@ class WASimulatorROS2Bridge(Node):
 
     def _create_publisher_WAIMUSensor(self):
         global Imu
+        global Vector3, Quaternion
         from sensor_msgs.msg import Imu
+        from geometry_msgs.msg import Vector3, Quaternion
 
         self.publisher_handles["imu"] = self.create_publisher(Imu, "imu", 1)
     _publisher_creators["WAIMUSensor"] = _create_publisher_WAIMUSensor
@@ -195,6 +196,15 @@ class WASimulatorROS2Bridge(Node):
         self.publisher_handles["track/right"] = self.create_publisher(
             PoseArray, "track/right", 1)
     _publisher_creators["WATrack"] = _create_publisher_WATrack
+
+    def _create_publisher_WAMatplotlibVisualization(self):
+        global Image
+        from sensor_msgs.msg import Image
+        from cv_bridge import CvBridge
+
+        self.cvbridge = CvBridge()
+        self.publisher_handles["visualization/matplotlib"] = self.create_publisher(Image, "visualization/matplotlib", 1)
+    _publisher_creators["WAMatplotlibVisualization"] = _create_publisher_WAMatplotlibVisualization
 
     # ----------------------------
     # Inferrable message callbacks
@@ -244,6 +254,15 @@ class WASimulatorROS2Bridge(Node):
         self.publisher_handles["track/right"].publish(
             self._points_to_PoseArray(data["right_points"]))
     _message_callbacks['WATrack'] = _message_callback_WATrack
+
+    def _message_callback_WAMatplotlibVisualization(self, message: dict):
+        data = message["data"]
+
+        if len(data["image"]):
+            image = self.cvbridge.cv2_to_imgmsg(data["image"])
+
+            self.publisher_handles["visualization/matplotlib"].publish(image)
+    _message_callbacks['WAMatplotlibVisualization'] = _message_callback_WAMatplotlibVisualization
 
     # ---------------------------------------------
     # WA Simulator data types to ROS msg converters
