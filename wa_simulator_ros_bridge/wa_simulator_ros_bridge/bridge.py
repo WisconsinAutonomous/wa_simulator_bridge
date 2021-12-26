@@ -74,7 +74,7 @@ class WASimulatorROS2Bridge(Node):
         # Simulation bridge setup
         # -----------------------
         # Create a system
-        self.system = wa.WASystem()
+        self.system = wa.WASystem(end_time=1e3)
 
         # Create the bridge
         # The bridge is responsible for communicating the simulation
@@ -147,35 +147,23 @@ class WASimulatorROS2Bridge(Node):
         from builtin_interfaces.msg import Time
         from std_msgs.msg import Int32
 
-        self.publisher_handles["time"] = self.create_publisher(Time, "time", 1)
-        self.publisher_handles["step_number"] = self.create_publisher(
-            Int32, "step_number", 1)
+        self.publisher_handles["system/time"] = self.create_publisher(Time, "system/time", 1)
+        self.publisher_handles["system/step_number"] = self.create_publisher(Int32, "system/step_number", 1)
     _publisher_creators["WASystem"] = _create_publisher_WASystem
 
     def _create_publisher_WAVehicle(self):
-        global Vector3, Quaternion
-        from geometry_msgs.msg import Vector3, Quaternion
+        global WAVehicleMsg, Accel, Twist, Pose, Vector3, Quaternion, Point
+        from wa_simulator_ros_msgs.msg import WAVehicle as WAVehicleMsg
+        from geometry_msgs.msg import Accel, Twist, Pose, Vector3, Quaternion, Point
 
-        self.publisher_handles["position"] = self.create_publisher(
-            Vector3, "position", 1)
-        self.publisher_handles["rotation"] = self.create_publisher(
-            Quaternion, "rotation", 1)
-        self.publisher_handles["linear_velocity"] = self.create_publisher(
-            Vector3, "linear_velocity", 1)
-        self.publisher_handles["angular_velocity"] = self.create_publisher(
-            Quaternion, "angular_velocity", 1)
-        self.publisher_handles["linear_acceleration"] = self.create_publisher(
-            Vector3, "linear_acceleration", 1)
-        self.publisher_handles["angular_acceleration"] = self.create_publisher(
-            Quaternion, "angular_acceleration", 1)
+        self.publisher_handles["vehicle/state"] = self.create_publisher(WAVehicleMsg, "vehicle/state", 1)
     _publisher_creators["WAVehicle"] = _create_publisher_WAVehicle
 
     def _create_publisher_WAGPSSensor(self):
         global NavSatFix
         from sensor_msgs.msg import NavSatFix
 
-        self.publisher_handles["gps"] = self.create_publisher(
-            NavSatFix, "gps", 1)
+        self.publisher_handles["sensor/gps"] = self.create_publisher(NavSatFix, "sensor/gps", 1)
     _publisher_creators["WAGPSSensor"] = _create_publisher_WAGPSSensor
 
     def _create_publisher_WAIMUSensor(self):
@@ -184,17 +172,24 @@ class WASimulatorROS2Bridge(Node):
         from sensor_msgs.msg import Imu
         from geometry_msgs.msg import Vector3, Quaternion
 
-        self.publisher_handles["imu"] = self.create_publisher(Imu, "imu", 1)
+        self.publisher_handles["sensor/imu"] = self.create_publisher(Imu, "sensor/imu", 1)
     _publisher_creators["WAIMUSensor"] = _create_publisher_WAIMUSensor
 
-    def _create_publisher_WATrack(self):
-        global PoseArray, Pose, Point
-        from geometry_msgs.msg import PoseArray, Pose, Point
+    def _create_publisher_WAWheelEncoderSensor(self):
+        global Float64
+        from std_msgs.msg import Float64
 
-        self.publisher_handles["track/left"] = self.create_publisher(
-            PoseArray, "track/left", 1)
-        self.publisher_handles["track/right"] = self.create_publisher(
-            PoseArray, "track/right", 1)
+        self.publisher_handles["sensor/wheel_encoder"] = self.create_publisher(Float64, "sensor/wheel_encoder", 1)
+    _publisher_creators["WAWheelEncoderSensor"] = _create_publisher_WAWheelEncoderSensor
+
+    def _create_publisher_WATrack(self):
+        global WATrackMsg, Point, Float64
+        from wa_simulator_ros_msgs.msg import WATrack as WATrackMsg
+        from geometry_msgs.msg import Point
+        from std_msgs.msg import Float64
+
+        self.publisher_handles["track/visible"] = self.create_publisher(WATrackMsg, "track/visible", 1)
+        self.publisher_handles["track/mapped"] = self.create_publisher(WATrackMsg, "track/mapped", 1)
     _publisher_creators["WATrack"] = _create_publisher_WATrack
 
     def _create_publisher_WAMatplotlibVisualization(self):
@@ -209,50 +204,67 @@ class WASimulatorROS2Bridge(Node):
     # ----------------------------
     # Inferrable message callbacks
     # ----------------------------
-    _message_callbacks: Dict[str, Callable[[
-        'WASimulatorROS2Bridge', dict], None]] = {}
+    _message_callbacks: Dict[str, Callable[['WASimulatorROS2Bridge', dict], None]] = {}
 
     def _message_callback_WASystem(self, message: dict):
         data = message["data"]
-        self.publisher_handles["time"].publish(
-            self._time_to_Time(data["time"]))
-        self.publisher_handles["step_number"].publish(
-            Int32(data=data["step_number"]))
+        self.publisher_handles["system/time"].publish(self._time_to_Time(data["time"]))
+        self.publisher_handles["system/step_number"].publish(Int32(data=data["step_number"]))
     _message_callbacks['WASystem'] = _message_callback_WASystem
 
     def _message_callback_WAVehicle(self, message: dict):
         data = message["data"]
-        self.publisher_handles["position"].publish(
-            self._WAVector_to_Vector3(data["position"]))
-        self.publisher_handles["rotation"].publish(
-            self._WAQuaternion_to_Quaternion(data["rotation"]))
-        self.publisher_handles["linear_velocity"].publish(
-            self._WAVector_to_Vector3(data["linear_velocity"]))
-        self.publisher_handles["angular_velocity"].publish(
-            self._WAQuaternion_to_Quaternion(data["angular_velocity"]))
-        self.publisher_handles["linear_acceleration"].publish(
-            self._WAVector_to_Vector3(data["linear_acceleration"]))
-        self.publisher_handles["angular_acceleration"].publish(
-            self._WAQuaternion_to_Quaternion(data["angular_acceleration"]))
+
+        vehicle_msg = WAVehicleMsg()
+        vehicle_msg.accel = Accel()
+        vehicle_msg.accel.linear = self._WAVector_to_Vector3(data["linear_acceleration"])
+        vehicle_msg.accel.angular = self._WAVector_to_Vector3(wa.WAVector(list(data["angular_acceleration"].to_euler())))
+        vehicle_msg.twist = Twist()
+        vehicle_msg.twist.linear = self._WAVector_to_Vector3(data["linear_velocity"])
+        vehicle_msg.twist.angular = self._WAVector_to_Vector3(wa.WAVector(list(data["angular_velocity"].to_euler())))
+        vehicle_msg.pose = Pose()
+        vehicle_msg.pose.position = self._WAVector_to_Point(data["position"])
+        vehicle_msg.pose.orientation = self._WAQuaternion_to_Quaternion(data["rotation"])
+
+        self.publisher_handles["vehicle/state"].publish(vehicle_msg)
     _message_callbacks['WAVehicle'] = _message_callback_WAVehicle
 
     def _message_callback_WAGPSSensor(self, message: dict):
         data = message["data"]
-        self.publisher_handles["gps"].publish(
+        self.publisher_handles["sensor/gps"].publish(
             self._WAGPSSensor_to_NavSatFix(**data))
     _message_callbacks['WAGPSSensor'] = _message_callback_WAGPSSensor
 
     def _message_callback_WAIMUSensor(self, message: dict):
         data = message["data"]
-        self.publisher_handles["imu"].publish(self._WAIMUSensor_to_Imu(**data))
+        self.publisher_handles["sensor/imu"].publish(self._WAIMUSensor_to_Imu(**data))
     _message_callbacks['WAIMUSensor'] = _message_callback_WAIMUSensor
+
+    def _message_callback_WAWheelEncoderSensor(self, message: dict):
+        data = message["data"]
+        self.publisher_handles["sensor/wheel_encoder"].publish(Float64(data=float(data["angular_speed"])))
+    _message_callbacks['WAWheelEncoderSensor'] = _message_callback_WAWheelEncoderSensor
 
     def _message_callback_WATrack(self, message: dict):
         data = message["data"]
-        self.publisher_handles["track/left"].publish(
-            self._points_to_PoseArray(data["left_points"]))
-        self.publisher_handles["track/right"].publish(
-            self._points_to_PoseArray(data["right_points"]))
+
+        visible_track = WATrackMsg()
+
+        visible = data["visible"]
+        visible_track.left_visible_points = self._points_to_Point_list(visible["left"])
+        visible_track.right_visible_points = self._points_to_Point_list(visible["right"])
+        
+        self.publisher_handles["track/visible"].publish(visible_track)
+
+        mapped_track = WATrackMsg()
+
+        mapped = data["mapped"]
+        mapped_track.mapped_coords = self._points_to_Point_list(mapped["coords"])
+        mapped_track.mapped_points = self._points_to_Point_list(mapped["points"])
+        mapped_track.mapped_widths = self._points_to_Point_list(mapped["widths"])
+
+        self.publisher_handles["track/mapped"].publish(mapped_track)
+
     _message_callbacks['WATrack'] = _message_callback_WATrack
 
     def _message_callback_WAMatplotlibVisualization(self, message: dict):
@@ -275,6 +287,9 @@ class WASimulatorROS2Bridge(Node):
     def _WAVector_to_Vector3(self, vec: wa.WAVector):
         return Vector3(x=vec.x, y=vec.y, z=vec.z)
 
+    def _WAVector_to_Point(self, vec: wa.WAVector):
+        return Point(x=vec.x, y=vec.y, z=vec.z)
+
     def _WAQuaternion_to_Quaternion(self, q: wa.WAQuaternion):
         return Quaternion(x=q.x, y=q.y, z=q.z, w=q.w)
 
@@ -287,6 +302,9 @@ class WASimulatorROS2Bridge(Node):
 
     def _points_to_PoseArray(self, points):
         return PoseArray(poses=[Pose(position=Point(x=x, y=y, z=z)) for x, y, z in points])
+
+    def _points_to_Point_list(self, points):
+        return [Point(x=x,y=y,z=z) for x, y, z in points]
 
 
 def main(args=None):
