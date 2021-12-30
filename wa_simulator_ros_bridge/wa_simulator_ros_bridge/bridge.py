@@ -74,7 +74,7 @@ class WASimulatorROS2Bridge(Node):
         # Simulation bridge setup
         # -----------------------
         # Create a system
-        self.system = wa.WASystem(end_time=1e3)
+        self.system = wa.WASystem()
 
         # Create the bridge
         # The bridge is responsible for communicating the simulation
@@ -99,6 +99,7 @@ class WASimulatorROS2Bridge(Node):
 
         # If the simulation isn't okay, shutdown
         if not self.sim_manager.is_ok():
+            self.logger.warn("Sim manager is not okay. Something with the simulation has occured.")
             rclpy.shutdown()
 
         # Update the simulation to send and receive data
@@ -111,7 +112,7 @@ class WASimulatorROS2Bridge(Node):
 
         When a new message is received, i.e. one with a unique name, a subscriber will be created
         """
-        self.logger.info(f"Received message from {name}.")
+        self.logger.info(f"Received message from {name}. Creating ROS publisher.")
 
         msg_type = message["type"]
         data = message["data"]
