@@ -35,6 +35,7 @@ import wa_simulator as wa
 
 # External imports
 from typing import Dict, Callable, Any, List, NoReturn
+import getpass
 
 class WASimulatorROS2Bridge(Node):
 
@@ -62,13 +63,13 @@ class WASimulatorROS2Bridge(Node):
         self.declare_parameter("port", value=5555, descriptor=port_descriptor)
         self.port = self.get_parameter("port").value
 
-        # IP
-        ip_descriptor = ParameterDescriptor(
+        # Host
+        host_descriptor = ParameterDescriptor(
             type=ParameterType.PARAMETER_STRING,
-            description="The ip that the bridge will listen for information from.")
-        self.declare_parameter("ip", value="172.20.0.3",
-                               descriptor=ip_descriptor)
-        self.ip = self.get_parameter("ip").value
+            description="The host that the bridge will listen for information from.")
+        self.declare_parameter("host", value=f"{getpass.getuser()}-wasim",
+                               descriptor=host_descriptor)
+        self.host = self.get_parameter("host").value
 
         # -----------------------
         # Simulation bridge setup
@@ -78,7 +79,7 @@ class WASimulatorROS2Bridge(Node):
 
         # Create the bridge
         # The bridge is responsible for communicating the simulation
-        self.bridge = wa.WABridge(self.system, hostname=self.ip, port=self.port, server=False)  # noqa
+        self.bridge = wa.WABridge(self.system, hostname=self.host, port=self.port, server=False)  # noqa
         self.bridge.add_receiver(message_parser=self.message_callback)
 
         # Create a simulation wrapper
