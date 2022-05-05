@@ -77,9 +77,15 @@ class WASimulatorROS2Bridge(Node):
         # Create a system
         self.system = wa.WASystem()
 
+        vehicle_inputs = wa.WAVehicleInputs(thorttle=1)
+
+
         # Create the bridge
         # The bridge is responsible for communicating the simulation
         self.bridge = wa.WABridge(self.system, hostname=self.host, port=self.port, server=False)  # noqa
+
+        self.bridge.add_sender("vehicle_inputs", vehicle_inputs)
+
         self.bridge.add_receiver(message_parser=self.message_callback)
 
         # Create a simulation wrapper
