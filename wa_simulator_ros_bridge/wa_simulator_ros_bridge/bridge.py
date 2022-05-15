@@ -77,14 +77,24 @@ class WASimulatorROS2Bridge(Node):
         # Create a system
         self.system = wa.WASystem()
 
-        vehicle_inputs = wa.WAVehicleInputs(thorttle=1)
+        vehicle_inputs = wa.WAVehicleInputs(throttle=1)
 
 
         # Create the bridge
         # The bridge is responsible for communicating the simulation
         self.bridge = wa.WABridge(self.system, hostname=self.host, port=self.port, server=False)  # noqa
 
+        # create subscribers
+        self.sub_steering = self.create_subscription(SteeringCommand,self._save_steering,1)
+        self.sub_braking = self.create_subscription(BrakingCommand,self._save_braking,1)
+        self.sub_throttle = self.create_subscription(ThrottleCommand,self._save_throttle,1)
+
+
+        # get the values from the ros message and put it into the vehicle_inputs
+        vehicle_inputs.steering, vehicle_inputs.throttle, vehicle_inputs.braking = self.steering, self.throttle, self.braking
+        self.vehicle_command.steering.value, self.vehicle_command.throttle.value, self.vehicle_command.braking.value
         self.bridge.add_sender("vehicle_inputs", vehicle_inputs)
+
 
         self.bridge.add_receiver(message_parser=self.message_callback)
 
@@ -95,6 +105,15 @@ class WASimulatorROS2Bridge(Node):
         # Periodic publishing
         timer_period = 1e-9  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
+
+    def _save_steering(self, msg):
+        self.steering = msg
+    
+    def _save_throttle(self, msg):
+        self.throttle = msg
+
+    def _save_braking(self, msg):
+        self.braking = msg
 
     def timer_callback(self):
         """
@@ -117,7 +136,7 @@ class WASimulatorROS2Bridge(Node):
         """
         Receives all messages from the simulation
 
-        When a new message is received, i.e. one with a unique name, a subscriber will be created
+        When a new message is received, i.e. one with a unique name, a publisher will be created
         """
         self.logger.info(f"Received message from {name}. Creating ROS publisher.")
 
