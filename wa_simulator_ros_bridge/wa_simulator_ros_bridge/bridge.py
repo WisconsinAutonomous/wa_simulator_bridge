@@ -92,7 +92,7 @@ class WASimulatorROS2Bridge(Node):
 
         # get the values from the ros message and put it into the vehicle_inputs
         vehicle_inputs.steering, vehicle_inputs.throttle, vehicle_inputs.braking = self.steering, self.throttle, self.braking
-        self.vehicle_command.steering.value, self.vehicle_command.throttle.value, self.vehicle_command.braking.value
+        # self.vehicle_command.steering.value, self.vehicle_command.throttle.value, self.vehicle_command.braking.value
         self.bridge.add_sender("vehicle_inputs", vehicle_inputs)
 
 
