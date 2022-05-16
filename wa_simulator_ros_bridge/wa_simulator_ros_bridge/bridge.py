@@ -52,15 +52,15 @@ class WASimulatorROS2Bridge(Node):
         self.subscriber_handles = {}
 
         steering_descriptor = ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description="The topic that SteeringCommand will be shipped on.")
-        self.declare_parameter("steering_topic", "/control/steering", steering_descriptor)
+        self.declare_parameter("steering_topic", "/controls/steering", steering_descriptor)
         self.steering_topic = self.get_parameter("steering_topic").value
         
         braking_descriptor = ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description="The topic that BrakingCommand will be shipped on.")
-        self.declare_parameter("braking_topic", "/control/braking", braking_descriptor)
+        self.declare_parameter("braking_topic", "/controls/braking", braking_descriptor)
         self.braking_topic = self.get_parameter("braking_topic").value
         
         throttle_descriptor = ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description="The topic that ThrottleCommand will be shipped on.")
-        self.declare_parameter("throttle_topic", "/control/throttle", throttle_descriptor)
+        self.declare_parameter("throttle_topic", "/controls/throttle", throttle_descriptor)
         self.throttle_topic = self.get_parameter("throttle_topic").value
 
         # Handles for callbacks
