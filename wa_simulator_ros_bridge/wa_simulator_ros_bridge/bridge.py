@@ -37,6 +37,8 @@ import wa_simulator as wa
 from typing import Dict, Callable, Any, List, NoReturn
 import getpass
 
+from wagrandprix_control_msgs.msg import SteeringCommand, BrakingCommand, ThrottleCommand
+
 class WASimulatorROS2Bridge(Node):
 
     def __init__(self):
@@ -48,6 +50,18 @@ class WASimulatorROS2Bridge(Node):
         # Publishers/subscribers will be added dynamically, based on the requirements of the simulation
         self.publisher_handles = {}
         self.subscriber_handles = {}
+
+        steering_descriptor = ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description="The topic that SteeringCommand will be shipped on.")
+        self.declare_parameter("steering_topic", "/control/steering", steering_descriptor)
+        self.steering_topic = self.get_parameter("steering_topic").value
+        
+        braking_descriptor = ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description="The topic that BrakingCommand will be shipped on.")
+        self.declare_parameter("braking_topic", "/control/braking", braking_descriptor)
+        self.braking_topic = self.get_parameter("braking_topic").value
+        
+        throttle_descriptor = ParameterDescriptor(type=ParameterType.PARAMETER_STRING, description="The topic that ThrottleCommand will be shipped on.")
+        self.declare_parameter("throttle_topic", "/control/throttle", throttle_descriptor)
+        self.throttle_topic = self.get_parameter("throttle_topic").value
 
         # Handles for callbacks
         # Used whenever a message is received
@@ -77,23 +91,22 @@ class WASimulatorROS2Bridge(Node):
         # Create a system
         self.system = wa.WASystem()
 
-        vehicle_inputs = wa.WAVehicleInputs(throttle=1)
-
+        self.vehicle_inputs = wa.WAVehicleInputs(throttle=1)
+        
+        self.steering = 0
+        self.throttle = 0
+        self.braking = 0
 
         # Create the bridge
         # The bridge is responsible for communicating the simulation
         self.bridge = wa.WABridge(self.system, hostname=self.host, port=self.port, server=False)  # noqa
 
         # create subscribers
-        self.sub_steering = self.create_subscription(SteeringCommand,self._save_steering,1)
-        self.sub_braking = self.create_subscription(BrakingCommand,self._save_braking,1)
-        self.sub_throttle = self.create_subscription(ThrottleCommand,self._save_throttle,1)
+        self.subscriber_handles[self.steering_topic] = self.create_subscription(SteeringCommand, self.steering_topic, self._save_steering, 1)
+        self.subscriber_handles[self.throttle_topic] = self.create_subscription(ThrottleCommand, self.throttle_topic, self._save_throttle, 1)
+        self.subscriber_handles[self.braking_topic] = self.create_subscription(BrakingCommand, self.braking_topic, self._save_braking, 1)
 
-
-        # get the values from the ros message and put it into the vehicle_inputs
-        vehicle_inputs.steering, vehicle_inputs.throttle, vehicle_inputs.braking = self.steering, self.throttle, self.braking
-        # self.vehicle_command.steering.value, self.vehicle_command.throttle.value, self.vehicle_command.braking.value
-        self.bridge.add_sender("vehicle_inputs", vehicle_inputs)
+        self.bridge.add_sender("vehicle_inputs", self.vehicle_inputs)
 
 
         self.bridge.add_receiver(message_parser=self.message_callback)
@@ -107,13 +120,13 @@ class WASimulatorROS2Bridge(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def _save_steering(self, msg):
-        self.steering = msg
+        self.steering = msg.value
     
     def _save_throttle(self, msg):
-        self.throttle = msg
+        self.throttle = msg.value
 
     def _save_braking(self, msg):
-        self.braking = msg
+        self.braking = msg.value
 
     def timer_callback(self):
         """
@@ -127,6 +140,11 @@ class WASimulatorROS2Bridge(Node):
         if not self.sim_manager.is_ok():
             self.logger.warn("Sim manager is not okay. Something with the simulation has occured.")
             rclpy.shutdown()
+
+        # Update vehicle inputs
+        self.vehicle_inputs.steering = self.steering
+        self.vehicle_inputs.throttle = self.throttle
+        self.vehicle_inputs.braking = self.braking
 
         # Update the simulation to send and receive data
         self.sim_manager.synchronize(self.system.time)
